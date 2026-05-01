@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom'; // ✅ add useNavigate
 import { Download, Heart, MessageCircle, Loader2, Sparkles, Send, Image as ImageIcon, Copy, Check, Trash2 } from 'lucide-react'; // ✅ add Trash2
 import useAuthStore from '../context/AuthContext';
+import { API_URL } from '../config/api';
 
 export default function SingleNote() {
   const { id } = useParams();
@@ -33,7 +34,7 @@ export default function SingleNote() {
   useEffect(() => {
     if (!token) { setError('Please log in to view notes'); setLoading(false); return; }
     setLoading(true);
-    fetch(`http://localhost:5000/api/notes/${id}`, {
+    fetch(`${API_URL}/api/notes/${id}`, {
       headers: { 'x-auth-token': token },
     })
       .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
@@ -48,7 +49,7 @@ export default function SingleNote() {
 
   useEffect(() => {
     if (!note || !token) return;
-    fetch(`http://localhost:5000/api/notes/${id}/comments`, {
+    fetch(`${API_URL}/api/notes/${id}/comments`, {
       headers: { 'x-auth-token': token },
     })
       .then(res => res.json())
@@ -84,7 +85,7 @@ const canDelete = note && user && (() => {
     if (!token || !note) return;
     setDeleting(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/notes/${id}`, {
+      const response = await fetch(`${API_URL}/api/notes/${id}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': token },
       });
@@ -108,7 +109,7 @@ const canDelete = note && user && (() => {
     setDownloading(true);
     setDownloadError('');
     try {
-      const response = await fetch(`http://localhost:5000/api/notes/${id}/download`, {
+      const response = await fetch(`${API_URL}/api/notes/${id}/download`, {
         headers: { 'x-auth-token': token },
       });
       if (!response.ok) {
@@ -138,7 +139,7 @@ const canDelete = note && user && (() => {
     if (!note || !token) return;
     setLikeLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/notes/${id}/like`, {
+      const response = await fetch(`${API_URL}/api/notes/${id}/like`, {
         method: 'PUT',
         headers: { 'x-auth-token': token },
       });
@@ -156,7 +157,7 @@ const canDelete = note && user && (() => {
     setSummaryError('');
     setSummary('');
     try {
-      const response = await fetch(`http://localhost:5000/api/ai/summarize`, {
+      const response = await fetch(`${API_URL}/api/ai/summarize`, {
         method: 'POST',
         headers: { 'x-auth-token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: summaryText, noteId: id }),
@@ -184,7 +185,7 @@ const canDelete = note && user && (() => {
     if (!commentText.trim() || !token) return;
     setCommentLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/notes/${id}/comments`, {
+      const response = await fetch(`${API_URL}/api/notes/${id}/comments`, {
         method: 'POST',
         headers: { 'x-auth-token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: commentText.trim() }),

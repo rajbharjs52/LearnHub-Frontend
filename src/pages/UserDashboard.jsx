@@ -104,7 +104,7 @@ export default function UserDashboard() {
   useEffect(() => {
     if (!token) { setError('Please log in'); setLoading(false); return; }
     setLoading(true);
-    fetch('http://localhost:5000/api/dashboard', {
+    fetch(`${API_URL}/api/dashboard`, {
       headers: { 'x-auth-token': token },
     })
       .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })

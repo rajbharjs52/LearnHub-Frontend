@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, User, Mail, Lock, GraduationCap } from 'lucide-react'; // Icons
 import useAuthStore from '../context/AuthContext'; // Your Zustand store
 import * as z from 'zod'; // Validation schema
+import { API_URL } from '../config/api';
 
 // Zod schema for validation (name, email, password, college, course)
 const registerSchema = z.object({
@@ -35,7 +36,7 @@ export default function Register() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+      const response = await fetch(`${API_URL}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

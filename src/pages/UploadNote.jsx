@@ -140,7 +140,7 @@ export default function UploadNote() {
     formData.append('previewImage', previewImage);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', 'http://localhost:5000/api/notes');
+    xhr.open('POST', `${API_URL}/api/notes`);
     xhr.setRequestHeader('x-auth-token', token);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));

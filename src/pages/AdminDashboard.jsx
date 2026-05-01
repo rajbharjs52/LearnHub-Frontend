@@ -4,6 +4,7 @@ import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import { API_URL } from '../config/api';
 import {
   Users, BookOpen, MessageSquare, Loader2,
   TrendingUp, ArrowUpRight, BarChart3, Activity
@@ -113,7 +114,7 @@ export default function AdminDashboard() {
     }
     setLoading(true);
     setError('');
-    fetch('http://localhost:5000/api/admin/stats', {
+    fetch('${API_URL}/api/admin/stats', {
       headers: { 'x-auth-token': token },
     })
       .then(res => {

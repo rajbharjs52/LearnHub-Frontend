@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Loader2, Users, X } from 'lucide-react';
 import useAuthStore from '../context/AuthContext';
+import { API_URL } from '../config/api';
 
 export default function ChatList() {
   const { token, user } = useAuthStore();
@@ -33,7 +34,7 @@ export default function ChatList() {
 
         console.log('Fetching rooms with token:', token ? 'Token exists' : 'No token');
 
-        const res = await fetch('http://localhost:5000/api/chat/rooms', {
+        const res = await fetch(`${API_URL}/api/chat/rooms`, {
           headers: { 
             'x-auth-token': token,
             'Content-Type': 'application/json'
@@ -95,7 +96,7 @@ export default function ChatList() {
 
     try {
       setCreatingRoom(true);
-      const res = await fetch('http://localhost:5000/api/chat/rooms', {
+      const res = await fetch('${API_URL}/api/chat/rooms', {
         method: 'POST',
         headers: {
           'x-auth-token': token,

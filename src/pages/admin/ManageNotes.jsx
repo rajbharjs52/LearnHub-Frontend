@@ -1,5 +1,6 @@
 // src/pages/admin/ManageNotes.jsx
 import { useState, useEffect, useCallback } from 'react';
+import { API_URL } from '../config/api';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, Loader2, Trash2, Edit3, X, Check,
@@ -30,7 +31,7 @@ function EditNoteModal({ note, token, onClose, onSaved }) {
     setError('');
     try {
       const noteId = note._id || note.id;
-      const res = await fetch(`http://localhost:5000/api/admin/notes/${noteId}`, {
+      const res = await fetch(`${API_URL}/api/admin/notes/${noteId}`, {
         method: 'PUT',
         headers: { 'x-auth-token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -130,7 +131,7 @@ function DeleteNoteConfirm({ note, token, onClose, onDeleted }) {
     setDeleting(true);
     try {
       const noteId = note._id || note.id;
-      const res = await fetch(`http://localhost:5000/api/admin/notes/${noteId}`, {
+      const res = await fetch(`${API_URL}/api/admin/notes/${noteId}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': token },
       });
@@ -198,7 +199,7 @@ export default function ManageNotes() {
         search, page, limit: 10,
         ...(subjectFilter && { subject: subjectFilter })
       });
-      const res = await fetch(`http://localhost:5000/api/admin/notes?${params}`, {
+      const res = await fetch(`${API_URL}/api/admin/notes?${params}`, {
         headers: { 'x-auth-token': token },
       });
       const data = await res.json();

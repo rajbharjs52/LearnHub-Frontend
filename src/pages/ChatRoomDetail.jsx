@@ -5,6 +5,8 @@ import {
   Send, Loader2, ArrowLeft, Users, LogIn,
   MessageSquare, X, LogOut, Trash2, ChevronRight
 } from 'lucide-react';
+import { API_URL } from '../config/api';
+import { SOCKET_URL } from '../config/api';
 import useAuthStore from '../context/AuthContext';
 import io from 'socket.io-client';
 
@@ -35,7 +37,7 @@ export default function ChatRoomDetail() {
   // Socket setup
   useEffect(() => {
     if (!token || !roomId) return;
-    const newSocket = io('http://localhost:5000', { auth: { token } });
+    const newSocket = io( SOCKET_URL, { auth: { token } });
     newSocket.on('connect', () => newSocket.emit('joinRoom', roomId));
     newSocket.on('newMessage', (msg) => setMessages(prev => [...prev, msg]));
     setSocket(newSocket);
@@ -46,7 +48,7 @@ export default function ChatRoomDetail() {
   useEffect(() => {
     if (!token || !roomId) return;
     setLoading(true);
-    fetch(`http://localhost:5000/api/chat/rooms/${roomId}/messages`, {
+    fetch(`${API_URL}/api/chat/rooms/${roomId}/messages`, {
       headers: { 'x-auth-token': token }
     })
       .then(res => { if (!res.ok) throw new Error('Failed to load room'); return res.json(); })
@@ -77,7 +79,7 @@ export default function ChatRoomDetail() {
   const handleJoin = async () => {
     setJoining(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/rooms/${roomId}/join`, {
+      const res = await fetch(`${API_URL}/api/chat/rooms/${roomId}/join`, {
         method: 'POST', headers: { 'x-auth-token': token }
       });
       if (!res.ok) throw new Error('Failed to join');
@@ -91,7 +93,7 @@ export default function ChatRoomDetail() {
   const handleLeave = async () => {
     setLeaving(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/rooms/${roomId}/leave`, {
+      const res = await fetch(`${API_URL}/api/chat/rooms/${roomId}/leave`, {
         method: 'POST', headers: { 'x-auth-token': token }
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.msg || 'Failed to leave'); }
@@ -106,7 +108,7 @@ export default function ChatRoomDetail() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/rooms/${roomId}`, {
+      const res = await fetch(`${API_URL}/api/chat/rooms/${roomId}`, {
         method: 'DELETE', headers: { 'x-auth-token': token }
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.msg || 'Failed to delete'); }

@@ -7,6 +7,7 @@ import {
   Mail, Building, Calendar, BookOpen, MessageCircle
 } from 'lucide-react';
 import useAuthStore from '../../context/AuthContext';
+import { API_URL } from '../config/api';
 
 const ROLES = ['user', 'admin'];
 
@@ -26,7 +27,7 @@ const handleSave = async () => {
   setError('');
   try {
     const userId = user._id || user.id; // ✅ fallback
-    const res = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
+    const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
       method: 'PUT',
       headers: { 'x-auth-token': token, 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
@@ -147,7 +148,7 @@ const handleDelete = async () => {
   setDeleting(true);
   try {
     const userId = user._id || user.id; // ✅ fallback
-    const res = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
+    const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
       method: 'DELETE',
       headers: { 'x-auth-token': token },
     });
@@ -209,7 +210,7 @@ export default function ManageUsers() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ search, page, limit: 10 });
-      const res = await fetch(`http://localhost:5000/api/admin/users?${params}`, {
+      const res = await fetch(`${API_URL}/api/admin/users?${params}`, {
         headers: { 'x-auth-token': token },
       });
       const data = await res.json();

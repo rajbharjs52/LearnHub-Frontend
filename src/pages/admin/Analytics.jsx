@@ -1,5 +1,6 @@
 // src/pages/admin/Analytics.jsx
 import { useState, useEffect } from 'react';
+import { API_URL } from '../config/api';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -63,7 +64,7 @@ export default function Analytics() {
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    fetch('http://localhost:5000/api/admin/stats', {
+    fetch(`${API_URL}/api/admin/stats`, {
       headers: { 'x-auth-token': token },
     })
       .then(res => res.json())

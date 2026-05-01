@@ -30,7 +30,7 @@ export default function Notes() {
   useEffect(() => {
     if (!token) { setError('Please log in to view notes'); setLoading(false); return; }
     setLoading(true);
-    fetch(`http://localhost:5000/api/notes`, { headers: { 'x-auth-token': token } })
+    fetch(`${API_URL}/api/notes`, { headers: { 'x-auth-token': token } })
       .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
       .then(data => { setNotes(data.notes || []); setError(''); })
       .catch(err => { console.error(err); setError('Failed to load notes'); })

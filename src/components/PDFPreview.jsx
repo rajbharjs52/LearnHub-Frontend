@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 // ✅ Local worker — no CDN, no CSP issues
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
@@ -23,7 +24,7 @@ export default function PDFPreview({ noteId, token }) {
     setPdfDoc(null);
     setCurrentPage(1);
 
-    fetch(`http://localhost:5000/api/notes/${noteId}/preview-url`, {
+    fetch(`${API_URL}/api/notes/${noteId}/preview-url`, {
       headers: { 'x-auth-token': token },
     })
       .then(res => {

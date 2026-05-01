@@ -5,6 +5,7 @@ import {
   Check, Eye, EyeOff, Camera, AlertTriangle
 } from 'lucide-react';
 import useAuthStore from '../context/AuthContext';
+import { API_URL } from '../config/api';
 
 // ✅ Notifications tab removed from TABS
 const TABS = [
@@ -61,7 +62,7 @@ function ProfileTab({ user, token, onUpdate }) {
     try {
       const formData = new FormData();
       formData.append('profilePic', file);
-      const res = await fetch('http://localhost:5000/api/auth/profile-pic', {
+      const res = await fetch(`${API_URL}/api/auth/profile-pic`, {
         method: 'PUT',
         headers: { 'x-auth-token': token },
         body: formData,
@@ -84,7 +85,7 @@ function ProfileTab({ user, token, onUpdate }) {
   const handleSave = async () => {
     setSaving(true); setSuccess(''); setError('');
     try {
-      const res = await fetch('http://localhost:5000/api/auth/profile', {
+      const res = await fetch(`${API_URL}/api/auth/profile`, {
         method: 'PUT',
         headers: { 'x-auth-token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -211,7 +212,7 @@ function PasswordTab({ token }) {
     if (form.newPass.length < 6) { setError('Password must be at least 6 characters'); return; }
     setSaving(true); setSuccess(''); setError('');
     try {
-      const res = await fetch('http://localhost:5000/api/auth/change-password', {
+      const res = await fetch(`${API_URL}/api/auth/change-password`, {
         method: 'PUT',
         headers: { 'x-auth-token': token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword: form.current, newPassword: form.newPass }),
