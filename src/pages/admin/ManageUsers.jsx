@@ -7,7 +7,7 @@ import {
   Mail, Building, Calendar, BookOpen, MessageCircle
 } from 'lucide-react';
 import useAuthStore from '../../context/AuthContext';
-import { API_URL } from '../config/api';
+import { API_URL } from '../../config/api';
 
 const ROLES = ['user', 'admin'];
 

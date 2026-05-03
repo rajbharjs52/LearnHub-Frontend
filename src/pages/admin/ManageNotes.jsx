@@ -1,6 +1,6 @@
 // src/pages/admin/ManageNotes.jsx
 import { useState, useEffect, useCallback } from 'react';
-import { API_URL } from '../config/api';
+import { API_URL } from '../../config/api';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, Loader2, Trash2, Edit3, X, Check,

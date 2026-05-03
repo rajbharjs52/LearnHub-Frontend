@@ -1,6 +1,6 @@
 // src/pages/admin/Analytics.jsx
 import { useState, useEffect } from 'react';
-import { API_URL } from '../config/api';
+import { API_URL } from '../../config/api';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
