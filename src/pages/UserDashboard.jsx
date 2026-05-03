@@ -11,6 +11,7 @@ import {
   ArrowUpRight, ArrowRight
 } from 'lucide-react';
 import useAuthStore from '../context/AuthContext';
+import { API_URL } from '../config/api';
 
 const CHART_OPTIONS = [
   {

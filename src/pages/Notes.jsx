@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Search, Plus, Loader2, BookOpen, Grid, List } from 'lucide-react';
 import NoteCard from '../components/NoteCard';
 import useAuthStore from '../context/AuthContext';
+import { API_URL } from '../config/api';
 
 // ✅ Predefined categories with icons
 // const CATEGORY_ICONS = {

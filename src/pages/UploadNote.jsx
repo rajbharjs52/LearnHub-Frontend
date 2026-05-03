@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Upload, X, Image, FileText, CheckCircle } from 'lucide-react';
 import useAuthStore from '../context/AuthContext';
 import * as z from 'zod';
+import { API_URL } from '../config/api';
 
 const SUBJECTS = [
   'Mathematics', 'Programming', 'Physics',

@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Mail, Lock } from 'lucide-react'; // Icons
 import useAuthStore from '../context/AuthContext'; // Your Zustand store
 import * as z from 'zod'; // Validation schema
+import { API_URL } from '../config/api'; // API base URL
 
 // Zod schema for validation
 const loginSchema = z.object({
