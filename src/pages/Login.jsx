@@ -52,6 +52,7 @@ export default function Login() {
     }
   } catch (err) {
     console.error('Full Error:', err); // Log for debug
+    console.log("API URL:", API_URL);
     setError(err.message || 'Network error—try again');
   } finally {
     setIsLoading(false);
