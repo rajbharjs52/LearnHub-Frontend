@@ -114,7 +114,7 @@ export default function AdminDashboard() {
     }
     setLoading(true);
     setError('');
-    fetch('${API_URL}/api/admin/stats', {
+    fetch(`${API_URL}/api/admin/stats`, {
       headers: { 'x-auth-token': token },
     })
       .then(res => {

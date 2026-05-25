@@ -96,7 +96,7 @@ export default function ChatList() {
 
     try {
       setCreatingRoom(true);
-      const res = await fetch('${API_URL}/api/chat/rooms', {
+      const res = await fetch(`${API_URL}/api/chat/rooms`, {
         method: 'POST',
         headers: {
           'x-auth-token': token,

@@ -5,8 +5,7 @@ import {
   Send, Loader2, ArrowLeft, Users, LogIn,
   MessageSquare, X, LogOut, Trash2, ChevronRight
 } from 'lucide-react';
-import { API_URL } from '../config/api';
-import { SOCKET_URL } from '../config/api';
+import { API_URL, SOCKET_URL } from '../config/api';
 import useAuthStore from '../context/AuthContext';
 import io from 'socket.io-client';
 
@@ -27,6 +26,8 @@ export default function ChatRoomDetail() {
   const [showMembers, setShowMembers] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  // ✅ Track sending state to prevent double send
+  const [sending, setSending] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -37,14 +38,37 @@ export default function ChatRoomDetail() {
   // Socket setup
   useEffect(() => {
     if (!token || !roomId) return;
-    const newSocket = io( SOCKET_URL, { auth: { token } });
+    const newSocket = io(SOCKET_URL, { auth: { token } });
     newSocket.on('connect', () => newSocket.emit('joinRoom', roomId));
-    newSocket.on('newMessage', (msg) => setMessages(prev => [...prev, msg]));
+
+    // ✅ Fix 1 — deduplicate messages by _id
+    // When socket broadcasts back, check if message already exists
+    // This prevents the double message from optimistic update + socket broadcast
+    newSocket.on('newMessage', (msg) => {
+      setMessages(prev => {
+        // Check if this message ID already exists in state
+        const alreadyExists = prev.some(m =>
+          m._id === msg._id ||
+          // Also check if optimistic message matches by text + sender + approximate time
+          (m._isOptimistic &&
+           m.text === msg.text &&
+           (m.sender?._id || m.sender?.id) === (msg.sender?._id || msg.sender?.id))
+        );
+        if (alreadyExists) {
+          // Replace optimistic message with real server message
+          return prev.map(m =>
+            (m._isOptimistic && m.text === msg.text) ? msg : m
+          );
+        }
+        return [...prev, msg];
+      });
+    });
+
     setSocket(newSocket);
     return () => newSocket.close();
   }, [roomId, token]);
 
-  // Fetch room + messages
+  // ✅ Fix 2 — fetch room with populated participants
   useEffect(() => {
     if (!token || !roomId) return;
     setLoading(true);
@@ -73,7 +97,6 @@ export default function ChatRoomDetail() {
     room?.createdBy?.id?.toString(),
   ].includes(currentUserId);
 
-  // ✅ Live member count from participants array
   const memberCount = room?.participants?.length ?? 0;
 
   const handleJoin = async () => {
@@ -89,7 +112,6 @@ export default function ChatRoomDetail() {
     finally { setJoining(false); }
   };
 
-  // ✅ Leave room
   const handleLeave = async () => {
     setLeaving(true);
     try {
@@ -120,18 +142,16 @@ export default function ChatRoomDetail() {
     finally { setDeleting(false); }
   };
 
+  // ✅ Fix 1 — no optimistic update, wait for socket broadcast
+  // Message will appear when server confirms and broadcasts back
   const handleSend = (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socket) return;
-    const optimisticMsg = {
-      _id: Date.now().toString(),
-      text: newMessage.trim(),
-      sender: user,
-      createdAt: new Date(),
-    };
-    setMessages(prev => [...prev, optimisticMsg]);
+    if (!newMessage.trim() || !socket || sending) return;
+    setSending(true);
     socket.emit('sendMessage', { roomId, text: newMessage.trim() });
     setNewMessage('');
+    // Reset sending after short delay
+    setTimeout(() => setSending(false), 500);
   };
 
   if (loading) return (
@@ -147,13 +167,19 @@ export default function ChatRoomDetail() {
     </div>
   );
 
-  // Get populated participants (filter out plain strings)
-  const populatedMembers = room.participants?.filter(p => typeof p === 'object' && p !== null) || [];
+  // ✅ Fix 2 — get populated members
+  const populatedMembers = room.participants?.filter(
+    p => typeof p === 'object' && p !== null
+  ) || [];
+
+  // ✅ Fix 2 — if participants are not populated (just IDs)
+  // we show count but tell user details unavailable
+  const hasPopulatedMembers = populatedMembers.length > 0;
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
 
-      {/* ── Delete confirm modal ── */}
+      {/* Delete confirm modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
@@ -183,7 +209,7 @@ export default function ChatRoomDetail() {
         </div>
       )}
 
-      {/* ── Leave confirm modal ── */}
+      {/* Leave confirm modal */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
@@ -213,10 +239,11 @@ export default function ChatRoomDetail() {
         </div>
       )}
 
-      {/* ── Members sidebar ── */}
+      {/* Members sidebar */}
       {showMembers && (
         <>
-          <div className="fixed inset-0 z-30 bg-black/20 md:hidden" onClick={() => setShowMembers(false)} />
+          <div className="fixed inset-0 z-30 bg-black/20 md:hidden"
+            onClick={() => setShowMembers(false)} />
           <div className="fixed md:relative top-0 right-0 h-full w-72 bg-white border-l border-gray-100 shadow-xl z-40 flex flex-col">
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
               <div>
@@ -228,40 +255,70 @@ export default function ChatRoomDetail() {
                 <X size={16} />
               </button>
             </div>
+
             <div className="flex-1 overflow-y-auto p-3 space-y-1">
-              {populatedMembers.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-6 italic">
-                  Member details not available
-                </p>
+              {/* ✅ Fix 2 — show message if participants not populated */}
+              {!hasPopulatedMembers ? (
+                <div className="text-center py-8">
+                  <Users size={28} className="text-gray-200 mx-auto mb-2" />
+                  <p className="text-xs text-gray-400 italic">
+                    {memberCount > 0
+                      ? `${memberCount} member${memberCount !== 1 ? 's' : ''} — refresh to see details`
+                      : 'No members yet'
+                    }
+                  </p>
+                </div>
               ) : (
                 populatedMembers.map((member, i) => {
                   const memberId = (member._id || member.id)?.toString();
                   const isMe = memberId === currentUserId;
-                  const isRoomCreator = memberId === (
-                    room.createdBy?._id?.toString() ||
-                    room.createdBy?.id?.toString() ||
-                    room.createdBy?.toString()
-                  );
+                  const isRoomCreator = [
+                    room.createdBy?._id?.toString(),
+                    room.createdBy?.id?.toString(),
+                    room.createdBy?.toString(),
+                  ].includes(memberId);
+
                   return (
                     <div key={memberId || i}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+
+                      {/* ✅ Fix 3 — profile pic with proper fallback */}
+                      <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-white shadow-sm">
                         {member.profilePic ? (
-                          <img src={member.profilePic} alt={member.name}
+                          <img
+                            src={member.profilePic}
+                            alt={member.name || 'Member'}
                             className="w-full h-full object-cover"
-                            onError={e => { e.target.style.display = 'none'; }} />
-                        ) : (
-                          <span className="text-xs font-semibold text-indigo-600">
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="w-full h-full items-center justify-center bg-indigo-100"
+                          style={{ display: member.profilePic ? 'none' : 'flex' }}
+                        >
+                          <span className="text-sm font-semibold text-indigo-600">
                             {member.name?.[0]?.toUpperCase() || '?'}
                           </span>
-                        )}
+                        </div>
                       </div>
+
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">
-                          {member.name || 'Unknown'} {isMe && <span className="text-xs text-gray-400">(you)</span>}
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-gray-800 truncate">
+                            {member.name || 'Unknown'}
+                          </p>
+                          {isMe && (
+                            <span className="text-xs text-gray-400 flex-shrink-0">(you)</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 truncate">
+                          {member.college || member.email || ''}
                         </p>
-                        <p className="text-xs text-gray-400 truncate">{member.college || ''}</p>
                       </div>
+
                       {isRoomCreator && (
                         <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-medium flex-shrink-0">
                           Host
@@ -276,7 +333,7 @@ export default function ChatRoomDetail() {
         </>
       )}
 
-      {/* ── Main chat area ── */}
+      {/* Main chat area */}
       <div className="flex flex-col flex-1 min-w-0">
 
         {/* Header */}
@@ -285,26 +342,19 @@ export default function ChatRoomDetail() {
             className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0">
             <ArrowLeft size={18} />
           </Link>
-
-          {/* Room avatar */}
           <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
             <MessageSquare size={17} className="text-indigo-600" />
           </div>
-
           <div className="flex-1 min-w-0">
             <h1 className="font-semibold text-gray-900 text-sm truncate">{room.name || 'Chat Room'}</h1>
             <p className="text-xs text-gray-400">{room.subject || 'General'}</p>
           </div>
-
-          {/* ✅ Members button — shows live count */}
           <button onClick={() => setShowMembers(s => !s)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-600 text-xs font-medium transition-colors">
             <Users size={14} />
             <span>{memberCount}</span>
             <ChevronRight size={12} className={`transition-transform ${showMembers ? 'rotate-90' : ''}`} />
           </button>
-
-          {/* Actions */}
           {isMember && !isCreator && (
             <button onClick={() => setShowLeaveConfirm(true)}
               className="p-2 rounded-xl hover:bg-amber-50 text-gray-400 hover:text-amber-500 transition-colors"
@@ -329,7 +379,11 @@ export default function ChatRoomDetail() {
                 <MessageSquare size={28} className="text-indigo-600" />
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Join the Conversation</h2>
-              <p className="text-gray-500 text-sm mb-2">{room.subject && <span className="font-medium text-indigo-600">{room.subject}</span>}</p>
+              {room.subject && (
+                <p className="text-sm mb-2">
+                  <span className="font-medium text-indigo-600">{room.subject}</span>
+                </p>
+              )}
               <p className="text-gray-400 text-sm mb-6">
                 {memberCount} member{memberCount !== 1 ? 's' : ''} in this room
               </p>
@@ -355,31 +409,47 @@ export default function ChatRoomDetail() {
                   <p className="text-gray-300 text-sm mt-1">Be the first to say something!</p>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, index) => {
                   const isMe = [
                     msg.sender?._id?.toString(),
                     msg.sender?.id?.toString(),
                   ].includes(currentUserId);
 
                   return (
-                    <div key={msg._id} className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg._id || index}
+                      className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+
                       {/* Avatar for others */}
                       {!isMe && (
-                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mb-1 overflow-hidden">
+                        <div className="w-7 h-7 rounded-full flex-shrink-0 mb-1 overflow-hidden border border-gray-100 shadow-sm bg-indigo-100 flex items-center justify-center">
+                          {/* ✅ Fix 3 — sender profile pic */}
                           {msg.sender?.profilePic ? (
-                            <img src={msg.sender.profilePic} alt={msg.sender?.name}
-                              className="w-full h-full object-cover" />
-                          ) : (
+                            <img
+                              src={msg.sender.profilePic}
+                              alt={msg.sender?.name || 'User'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="w-full h-full items-center justify-center bg-indigo-100"
+                            style={{ display: msg.sender?.profilePic ? 'none' : 'flex' }}
+                          >
                             <span className="text-xs font-semibold text-indigo-600">
                               {msg.sender?.name?.[0]?.toUpperCase() || '?'}
                             </span>
-                          )}
+                          </div>
                         </div>
                       )}
 
-                      <div className={`max-w-[72%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+                      <div className={`max-w-[72%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                         {!isMe && (
-                          <p className="text-xs font-medium text-indigo-600 mb-1 ml-1">{msg.sender?.name}</p>
+                          <p className="text-xs font-medium text-indigo-600 mb-1 ml-1">
+                            {msg.sender?.name || 'Unknown'}
+                          </p>
                         )}
                         <div className={`px-4 py-2.5 rounded-2xl text-sm break-words ${
                           isMe
@@ -387,18 +457,32 @@ export default function ChatRoomDetail() {
                             : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm shadow-sm'
                         }`}>
                           <p>{msg.text}</p>
-                          <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-indigo-200' : 'text-gray-400'}`}>
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <p className={`text-[10px] mt-1 text-right ${
+                            isMe ? 'text-indigo-200' : 'text-gray-400'
+                          }`}>
+                            {new Date(msg.createdAt).toLocaleTimeString([], {
+                              hour: '2-digit', minute: '2-digit'
+                            })}
                           </p>
                         </div>
                       </div>
 
                       {/* Avatar for me */}
                       {isMe && (
-                        <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0 mb-1">
-                          <span className="text-xs font-semibold text-white">
-                            {user?.name?.[0]?.toUpperCase() || 'Me'}
-                          </span>
+                        <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0 mb-1 overflow-hidden">
+                          {/* ✅ Fix 3 — current user profile pic */}
+                          {user?.profilePic ? (
+                            <img
+                              src={user.profilePic}
+                              alt={user?.name || 'Me'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <span className="text-xs font-semibold text-white">
+                              {user?.name?.[0]?.toUpperCase() || 'M'}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -418,9 +502,14 @@ export default function ChatRoomDetail() {
                   placeholder="Type a message..."
                   className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
-                <button type="submit" disabled={!newMessage.trim()}
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim() || sending}
                   className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0">
-                  <Send size={16} />
+                  {sending
+                    ? <Loader2 size={16} className="animate-spin" />
+                    : <Send size={16} />
+                  }
                 </button>
               </form>
             </div>
